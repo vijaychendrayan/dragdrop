@@ -90,7 +90,7 @@ abstract class Component<T extends HTMLElement, U extends HTMLElement>{
 
 //  Project Type 
 
-enum ProjectStatus {Active, Finished}
+enum ProjectStatus {Active, Finished, Progress}
 
 // Project  class declaration
 
@@ -152,9 +152,25 @@ class ProjectState extends State<Project>{
 
         }
     }
+
+    moveProject(projectId: string, newStatus: ProjectStatus){
+
+        const project = this.projects.find(prj => prj.id === projectId)
+        if(project && project.status !== newStatus){
+            project.status = newStatus;
+            this.updateListeners();
+        }
+
+    }
+
+    private updateListeners(){
+        for (const listenerFn of this.listeners){
+            listenerFn(this.projects.slice());
+        }
+    }
 }
 
-const projectState = ProjectState.getInstance();
+
 
 // Project Item Class
 
@@ -177,7 +193,9 @@ class ProjectItem extends Component<HTMLUListElement, HTMLLIElement> implements 
     }
 
     @autobind
-    dragStartHandler(_: DragEvent): void {
+    dragStartHandler(event: DragEvent): void {
+        event.dataTransfer!.setData('text/plain', this.project.id);
+        event.dataTransfer!.effectAllowed = 'move';
         console.log('Start Drag');
         
     }
@@ -203,17 +221,42 @@ class ProjectItem extends Component<HTMLUListElement, HTMLLIElement> implements 
 }
 
 // Project List class declaration
-class ProjectList extends Component<HTMLDivElement, HTMLElement>  {
+class ProjectList extends Component<HTMLDivElement, HTMLElement> implements DrageTarget  {
     
     assignedProjects: Project[];
-    constructor(private type: 'active'|'finished'){
+    constructor(private type: 'active'|'finished'|'progress'){
         super('project-list','app',false, `${type}-projects`);
         this.assignedProjects = [];
         this.configure();
         this.renderContent();
     }
 
-    
+    @autobind
+    dragOverHandler(event: DragEvent): void {
+
+        if( event.dataTransfer && event.dataTransfer.types[0] === 'text/plain'){
+        
+            event.preventDefault();
+            const listEl = this.element.querySelector('ul')!;
+            listEl.classList.add('droppable');
+        }
+        
+    }
+
+    @autobind
+    dropHandler(event: DragEvent): void {
+        const prjId = event.dataTransfer!.getData('text/plain');
+        projectState.moveProject(prjId, this.type === 'active'? ProjectStatus.Active : this.type === 'progress' ? ProjectStatus.Progress: ProjectStatus.Finished)
+        console.log(event);
+    }
+
+    @autobind
+    dragLeaveHandler(_: DragEvent): void {
+
+        const listEl = this.element.querySelector('ul')!;
+        listEl.classList.remove('droppable');
+        
+    }
     private renderProjects(){
         const listEl = document.getElementById(`${this.type}-projects-list`)! as HTMLUListElement;
         listEl.innerHTML = '';
@@ -223,12 +266,18 @@ class ProjectList extends Component<HTMLDivElement, HTMLElement>  {
 
     }
     configure(): void {  
+        this.element.addEventListener('dragover', this.dragOverHandler);
+        this.element.addEventListener('dragleave', this.dragLeaveHandler);
+        this.element.addEventListener('drop', this.dropHandler);
+
         projectState.addListener((projects: Project[]) => {
             const relaventProjects = projects.filter(prj => { 
             if(this.type === 'active'){
                 return prj.status === ProjectStatus.Active
-            }
-            return prj.status === ProjectStatus.Finished;
+            }else if(this.type === 'progress'){
+                return prj.status === ProjectStatus.Progress;
+            }else
+                return prj.status === ProjectStatus.Finished;
             });
 
             this.assignedProjects = relaventProjects;
@@ -242,15 +291,11 @@ class ProjectList extends Component<HTMLDivElement, HTMLElement>  {
         this.element.querySelector('h2')!.textContent = this.type.toUpperCase()+' PROJECTS';
 
     }
-    // private attach(){
-    //     this.hostElement.insertAdjacentElement('beforeend', this.element);
-    // }
+    
 }
 // Class declaration
 class ProjectInput extends Component<HTMLDivElement, HTMLFormElement>{
-    // templateElement : HTMLTemplateElement;
-    // hostElement : HTMLDivElement;
-    // element : HTMLFormElement;
+    
     titleInputElement: HTMLInputElement;
     descriptionInputElement: HTMLInputElement;
     peopleInputElement: HTMLInputElement;
@@ -325,6 +370,8 @@ class ProjectInput extends Component<HTMLDivElement, HTMLFormElement>{
 
 }
 
+const projectState = ProjectState.getInstance();
 const prjInput = new ProjectInput();
 const activePrjList = new ProjectList('active');
+const progressPrjList = new ProjectList('progress');
 const finishedPrjList = new ProjectList('finished');

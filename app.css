@@ -126,3 +126,20 @@ button:active {
   border: 1px solid #ff0062;
   background: #f7f7f7;
 }
+
+
+#progress-projects {
+  border-color: #ff7b00;
+}
+
+#progress-projects header {
+  background: #ff7b00;
+}
+
+#progress-projects li h2 {
+  color: #ff7b00;
+}
+
+#progress-projects .droppable {
+  background: #ffedd6;
+}
