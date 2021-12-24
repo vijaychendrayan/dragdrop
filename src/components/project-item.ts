@@ -1,7 +1,7 @@
-import {Component} from "./base-component.js";
-import {Draggable} from "../models/drag-drop.js";
-import {Project} from "../models/project-model.js";
-import { autobind } from "../decorators/autobind.js";
+import {Component} from "./base-component";
+import {Draggable} from "../models/drag-drop";
+import {Project} from "../models/project-model";
+import { autobind } from "../decorators/autobind";
 
 // Project Item Class
 
@@ -22,6 +22,7 @@ export class ProjectItem extends Component<HTMLUListElement, HTMLLIElement> impl
         this.configure();
         this.renderContent();
     }
+
 
     @autobind
     dragStartHandler(event: DragEvent): void {
